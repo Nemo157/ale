@@ -46,44 +46,49 @@ function! ale#c#FindProjectRoot(buffer) abort
     return ''
 endfunction
 
-function! ale#c#ParseCFlags(path_prefix, cflag_line) abort
+function! ale#c#ParseCFlags(path_prefix, cflags) abort
     let l:cflags_list = []
-    let l:previous_options = []
+    let l:previous_option = ''
 
-    for l:option in split(a:cflag_line, '-')
-        call add(l:previous_options, l:option)
-        " Check if cflag contained a '-' and should not have been splitted
-        let l:option_list = split(l:option, '\zs')
-
-        if l:option_list[-1] isnot# ' '
-            continue
-        endif
-
-        let l:option = join(l:previous_options, '-')
-        let l:previous_options = []
-
-        let l:option = '-' . substitute(l:option, '^\s*\(.\{-}\)\s*$', '\1', '')
-
-        " Fix relative paths if needed
-        if stridx(l:option, '-I') >= 0 &&
-           \ stridx(l:option, '-I' . s:sep) < 0
-            let l:rel_path = join(split(l:option, '\zs')[2:], '')
-            let l:rel_path = substitute(l:rel_path, '"', '', 'g')
-            let l:rel_path = substitute(l:rel_path, '''', '', 'g')
-            let l:option = ale#Escape('-I' . a:path_prefix .
-                                      \ s:sep . l:rel_path)
-        endif
-
-        " Parse the cflag
-        if stridx(l:option, '-I') >= 0 ||
-           \ stridx(l:option, '-D') >= 0
-            if index(l:cflags_list, l:option) < 0
-                call add(l:cflags_list, l:option)
+    for l:option in a:cflags
+        if l:previous_option == '-I'
+            if l:option[0] != s:sep
+                let l:rel_path = join(split(l:option, '\zs')[2:], '')
+                let l:rel_path = substitute(l:rel_path, '"', '', 'g')
+                let l:rel_path = substitute(l:rel_path, '''', '', 'g')
+                let l:option = ale#Escape('-I' . a:path_prefix .
+                                          \ s:sep . l:rel_path)
+            endif
+        elseif l:option[0:1] == '-I' && len(l:option) > 2
+            if l:option[2] != s:sep
+                let l:rel_path = join(split(l:option, '\zs')[2:], '')
+                let l:rel_path = substitute(l:rel_path, '"', '', 'g')
+                let l:rel_path = substitute(l:rel_path, '''', '', 'g')
+                let l:option = ale#Escape('-I' . a:path_prefix .
+                                          \ s:sep . l:rel_path)
             endif
         endif
+
+        if l:previous_option == '-I' || l:previous_option == '-D'
+            call add(l:cflags_list, l:previous_option)
+            call add(l:cflags_list, l:option)
+        elseif (l:option[0:1] == '-I' || l:option[0:1] == '-D')
+            \ && len(l:option) > 2
+            call add(l:cflags_list, l:option)
+        endif
+
+        let l:previous_option = l:option
     endfor
 
     return join(l:cflags_list, ' ')
+endfunction
+
+function! ale#c#SplitCommandLine(command_line) abort
+    return split(a:command_line, ' ')
+endfunction
+
+function! ale#c#ParseCFlagLine(path_prefix, cflag_line) abort
+    return ale#c#ParseCFlags(a:path_prefix, ale#c#SplitCommandLine(a:cflag_line))
 endfunction
 
 function! ale#c#ParseCFlagsFromMakeOutput(buffer, make_output) abort
@@ -105,7 +110,7 @@ function! ale#c#ParseCFlagsFromMakeOutput(buffer, make_output) abort
     let l:makefile_path = ale#path#FindNearestFile(a:buffer, 'Makefile')
     let l:makefile_dir = fnamemodify(l:makefile_path, ':p:h')
 
-    return ale#c#ParseCFlags(l:makefile_dir, l:cflag_line)
+    return ale#c#ParseCFlagLine(l:makefile_dir, l:cflag_line)
 endfunction
 
 " Given a buffer number, find the build subdirectory with compile commands
@@ -173,7 +178,13 @@ function! ale#c#ParseCompileCommandsFlags(buffer, dir, json_list) abort
     " Search for an exact file match first.
     for l:item in a:json_list
         if bufnr(l:item.file) is a:buffer
-            return ale#c#ParseCFlags(a:dir, l:item.command)
+            if has_key(l:item, 'arguments')
+                return ale#c#ParseCFlags(a:dir, l:item.arguments)
+            elseif has_key(l:item, 'command')
+                return ale#c#ParseCFlagLine(a:dir, l:item.command)
+            else
+                return ''
+            endif
         endif
     endfor
 
@@ -182,7 +193,13 @@ function! ale#c#ParseCompileCommandsFlags(buffer, dir, json_list) abort
 
     for l:item in a:json_list
         if ale#path#Simplify(fnamemodify(l:item.file, ':h')) is? l:dir
-            return ale#c#ParseCFlags(a:dir, l:item.command)
+            if has_key(l:item, 'arguments')
+                return ale#c#ParseCFlags(a:dir, l:item.arguments)
+            elseif has_key(l:item, 'command')
+                return ale#c#ParseCFlagLine(a:dir, l:item.command)
+            else
+                return ''
+            endif
         endif
     endfor
 

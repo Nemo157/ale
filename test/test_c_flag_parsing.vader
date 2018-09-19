@@ -46,7 +46,7 @@ Execute(ParseCFlags should be able to parse flags with relative paths):
   \ ale#Escape('-I' . ale#path#Simplify(g:dir. '/test_c_projects/makefile_project/subdir'))
   \   . ' ' . ale#Escape('-I' . ale#path#Simplify(g:dir. '/test_c_projects/makefile_project/kernel/include'))
   \   . ' -DTEST=`date +%s`',
-  \ ale#c#ParseCFlags(
+  \ ale#c#ParseCFlagLine(
   \   ale#path#Simplify(g:dir. '/test_c_projects/makefile_project'),
   \   'gcc -Isubdir  '
   \     .  '-I'. ale#path#Simplify('kernel/include')
@@ -59,7 +59,7 @@ Execute(ParseCFlags should be able to parse -Dgoal):
   \   . ' ' . ale#Escape('-I' . ale#path#Simplify(g:dir. '/test_c_projects/makefile_project/subdir'))
   \   . ' ' . ale#Escape('-I' . ale#path#Simplify(g:dir. '/test_c_projects/makefile_project/kernel/include'))
   \   . ' -DTEST=`date +%s`',
-  \ ale#c#ParseCFlags(
+  \ ale#c#ParseCFlagLine(
   \   ale#path#Simplify(g:dir. '/test_c_projects/makefile_project'),
   \   'gcc -Dgoal=9 -Isubdir '
   \     . '-I'. ale#path#Simplify('kernel/include')
@@ -72,7 +72,7 @@ Execute(ParseCFlags should ignore -T and other arguments):
   \   . ' ' . ale#Escape('-I' . ale#path#Simplify(g:dir. '/test_c_projects/makefile_project/subdir'))
   \   . ' ' . ale#Escape('-I' . ale#path#Simplify(g:dir. '/test_c_projects/makefile_project/kernel/include'))
   \   . ' -DTEST=`date +%s`',
-  \ ale#c#ParseCFlags(
+  \ ale#c#ParseCFlagLine(
   \   ale#path#Simplify(g:dir. '/test_c_projects/makefile_project'),
   \   'gcc -Dgoal=9 -Tlinkerfile.ld blabla -Isubdir '
   \     .  '-I'. ale#path#Simplify('kernel/include')
@@ -86,7 +86,7 @@ Execute(ParseCFlags should handle paths with spaces in double quotes):
   \   . ' ' . ale#Escape('-I' . ale#path#Simplify(g:dir. '/test_c_projects/makefile_project/dir with spaces'))
   \   . ' ' . ale#Escape('-I' . ale#path#Simplify(g:dir. '/test_c_projects/makefile_project/kernel/include'))
   \   . ' -DTEST=`date +%s`',
-  \ ale#c#ParseCFlags(
+  \ ale#c#ParseCFlagLine(
   \   ale#path#Simplify(g:dir. '/test_c_projects/makefile_project'),
   \   'gcc -Dgoal=9 -Tlinkerfile.ld blabla -Isubdir '
   \     . '-I"dir with spaces"' . ' -I'. ale#path#Simplify('kernel/include')
@@ -100,7 +100,7 @@ Execute(ParseCFlags should handle paths with spaces in single quotes):
   \   . ' ' . ale#Escape('-I' . ale#path#Simplify(g:dir. '/test_c_projects/makefile_project/dir with spaces'))
   \   . ' ' . ale#Escape('-I' . ale#path#Simplify(g:dir. '/test_c_projects/makefile_project/kernel/include'))
   \   . ' -DTEST=`date +%s`',
-  \ ale#c#ParseCFlags(
+  \ ale#c#ParseCFlagLine(
   \   ale#path#Simplify(g:dir. '/test_c_projects/makefile_project'),
   \   'gcc -Dgoal=9 -Tlinkerfile.ld blabla -Isubdir '
   \     . '-I''dir with spaces''' . ' -I'. ale#path#Simplify('kernel/include')
@@ -115,7 +115,7 @@ Execute(ParseCFlags should handle paths with minuses):
   \   . ' ' . ale#Escape('-I' . ale#path#Simplify(g:dir. '/test_c_projects/makefile_project/dir-with-dash'))
   \   . ' ' . ale#Escape('-I' . ale#path#Simplify(g:dir. '/test_c_projects/makefile_project/kernel/include'))
   \   . ' -DTEST=`date +%s`',
-  \ ale#c#ParseCFlags(
+  \ ale#c#ParseCFlagLine(
   \   ale#path#Simplify(g:dir. '/test_c_projects/makefile_project'),
   \   'gcc -Dgoal=9 -Tlinkerfile.ld blabla -Isubdir '
   \     . '-I''dir with spaces''' . ' -Idir-with-dash'
@@ -132,13 +132,31 @@ Execute(ParseCFlags should handle -D with minuses):
   \   . ' ' . ale#Escape('-I' . ale#path#Simplify(g:dir. '/test_c_projects/makefile_project/dir-with-dash'))
   \   . ' ' . ale#Escape('-I' . ale#path#Simplify(g:dir. '/test_c_projects/makefile_project/kernel/include'))
   \   . ' -DTEST=`date +%s`',
-  \ ale#c#ParseCFlags(
+  \ ale#c#ParseCFlagLine(
   \   ale#path#Simplify(g:dir. '/test_c_projects/makefile_project'),
   \   'gcc -Dgoal=9 -Tlinkerfile.ld blabla -Isubdir '
   \     . '-Dmacro-with-dash '
   \     . '-I''dir with spaces''' . ' -Idir-with-dash'
   \     . ' -I'. ale#path#Simplify('kernel/include')
   \     . ' -DTEST=`date +%s` -c file.c'
+  \ )
+
+Execute(ParseCFlags should handle separate flag and arguments):
+  AssertEqual
+  \ '-Dgoal=9'
+  \   . ' ' . ale#Escape('-I' . ale#path#Simplify(g:dir. '/test_c_projects/makefile_project/subdir'))
+  \   . ' -Dmacro-with-dash'
+  \   . ' ' . ale#Escape('-I' . ale#path#Simplify(g:dir. '/test_c_projects/makefile_project/dir with spaces'))
+  \   . ' ' . ale#Escape('-I' . ale#path#Simplify(g:dir. '/test_c_projects/makefile_project/dir-with-dash'))
+  \   . ' ' . ale#Escape('-I' . ale#path#Simplify(g:dir. '/test_c_projects/makefile_project/kernel/include'))
+  \   . ' -DTEST=`date +%s`',
+  \ ale#c#ParseCFlagLine(
+  \   ale#path#Simplify(g:dir. '/test_c_projects/makefile_project'),
+  \   'gcc -D goal=9 -Tlinkerfile.ld blabla -I subdir '
+  \     . '-D macro-with-dash '
+  \     . '-I ''dir with spaces''' . ' -I dir-with-dash'
+  \     . ' -I '. ale#path#Simplify('kernel/include')
+  \     . ' -D TEST=`date +%s` -c file.c'
   \ )
 
 Execute(FlagsFromCompileCommands should tolerate empty values):
@@ -151,13 +169,35 @@ Execute(ParseCompileCommandsFlags should parse some basic flags):
   noautocmd execute 'file! ' . fnameescape(ale#path#Simplify('/foo/bar/xmms2-mpris/src/xmms2-mpris.c'))
 
   AssertEqual
-  \ '-I' . ale#path#Simplify('/usr/include/xmms2'),
+  \ '-I' . ale#path#Simplify('/usr/include/xmms2')
+  \   . ' -I ' . ale#path#Simplify('/usr/include/xmms3'),
   \ ale#c#ParseCompileCommandsFlags(bufnr(''), ale#path#Simplify('/foo/bar/xmms2-mpris'), [
   \   {
   \     'directory': ale#path#Simplify('/foo/bar/xmms2-mpris'),
   \     'command': '/usr/bin/cc  -I' . ale#path#Simplify('/usr/include/xmms2')
+  \       . ' -I ' . ale#path#Simplify('/usr/include/xmms3')
   \       . '    -o CMakeFiles/xmms2-mpris.dir/src/xmms2-mpris.c.o'
   \       . '   -c ' . ale#path#Simplify('/foo/bar/xmms2-mpris/src/xmms2-mpris.c'),
+  \     'file': ale#path#Simplify('/foo/bar/xmms2-mpris/src/xmms2-mpris.c'),
+  \   },
+  \ ])
+
+Execute(ParseCompileCommandsFlags should parse some basic flags from arguments):
+  noautocmd execute 'file! ' . fnameescape(ale#path#Simplify('/foo/bar/xmms2-mpris/src/xmms2-mpris.c'))
+
+  AssertEqual
+  \ '-I' . ale#path#Simplify('/usr/include/xmms2')
+  \   . ' -I ' . ale#path#Simplify('/usr/include/xmms3'),
+  \ ale#c#ParseCompileCommandsFlags(bufnr(''), ale#path#Simplify('/foo/bar/xmms2-mpris'), [
+  \   {
+  \     'directory': ale#path#Simplify('/foo/bar/xmms2-mpris'),
+  \     'arguments': [
+  \       '/usr/bin/cc',
+  \       '-I' . ale#path#Simplify('/usr/include/xmms2'),
+  \       '-I', ale#path#Simplify('/usr/include/xmms3'),
+  \       '-o', 'CMakeFiles/xmms2-mpris.dir/src/xmms2-mpris.c.o',
+  \       '-c', ale#path#Simplify('/foo/bar/xmms2-mpris/src/xmms2-mpris.c'),
+  \     ],
   \     'file': ale#path#Simplify('/foo/bar/xmms2-mpris/src/xmms2-mpris.c'),
   \   },
   \ ])
