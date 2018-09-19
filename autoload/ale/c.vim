@@ -51,21 +51,21 @@ function! ale#c#ParseCFlags(path_prefix, cflags) abort
     let l:previous_option = ''
 
     for l:option in a:cflags
-        if (l:option[0:1] == '-I' || l:option[0:1] == '-D') && len(l:option) > 2
+        if (l:option[0:1] is# '-I' || l:option[0:1] is# '-D') && len(l:option) > 2
             let l:previous_option = l:option[0:1]
             let l:option = l:option[2:]
         endif
 
-        if l:previous_option == '-I'
+        if l:previous_option is# '-I'
             if l:option[0] != s:sep
                 let l:option = a:path_prefix . s:sep . l:option
             endif
         endif
 
-        if l:previous_option == '-I'
+        if l:previous_option is# '-I'
             call add(l:cflags_list, l:previous_option)
             call add(l:cflags_list, ale#Escape(l:option))
-        elseif l:previous_option == '-D'
+        elseif l:previous_option is# '-D'
             call add(l:cflags_list, l:previous_option)
             call add(l:cflags_list, l:option) " seems hacky
         endif

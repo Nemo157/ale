@@ -76,6 +76,8 @@ Execute(ParseCFlags should ignore -T and other arguments):
   \   ale#path#Simplify(g:dir. '/test_c_projects/makefile_project'),
   \   'gcc -Dgoal=9 -Tlinkerfile.ld blabla -Isubdir '
   \     .  '-I'. ale#path#Simplify('kernel/include')
+  \     . ' -imultilib'
+  \     . ' -dumpbase'
   \     .  ' -DTEST=`date +%s` -c file.c'
   \ )
 
@@ -180,6 +182,8 @@ Execute(ParseCompileCommandsFlags should parse some basic flags):
   \       . ' -I ' . ale#path#Simplify('/usr/include/xmms3')
   \       . ' -I' . ale#path#Simplify('xmms4')
   \       . ' -I ' .  ale#path#Simplify('xmms5')
+  \       . ' -imultilib'
+  \       . ' -dumpbase'
   \       . '    -o CMakeFiles/xmms2-mpris.dir/src/xmms2-mpris.c.o'
   \       . '   -c ' . ale#path#Simplify('/foo/bar/xmms2-mpris/src/xmms2-mpris.c'),
   \     'file': ale#path#Simplify('/foo/bar/xmms2-mpris/src/xmms2-mpris.c'),
@@ -203,6 +207,8 @@ Execute(ParseCompileCommandsFlags should parse some basic flags from arguments):
   \       '-I', ale#path#Simplify('/usr/include/xmms3'),
   \       '-I' . ale#path#Simplify('xmms4'),
   \       '-I', ale#path#Simplify('xmms5'),
+  \       '-imultilib',
+  \       '-dumpbase',
   \       '-o', 'CMakeFiles/xmms2-mpris.dir/src/xmms2-mpris.c.o',
   \       '-c', ale#path#Simplify('/foo/bar/xmms2-mpris/src/xmms2-mpris.c'),
   \     ],
