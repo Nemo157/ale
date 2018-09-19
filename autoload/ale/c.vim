@@ -51,30 +51,23 @@ function! ale#c#ParseCFlags(path_prefix, cflags) abort
     let l:previous_option = ''
 
     for l:option in a:cflags
+        if (l:option[0:1] == '-I' || l:option[0:1] == '-D') && len(l:option) > 2
+            let l:previous_option = l:option[0:1]
+            let l:option = l:option[2:]
+        endif
+
         if l:previous_option == '-I'
             if l:option[0] != s:sep
-                let l:rel_path = join(split(l:option, '\zs')[2:], '')
-                let l:rel_path = substitute(l:rel_path, '"', '', 'g')
-                let l:rel_path = substitute(l:rel_path, '''', '', 'g')
-                let l:option = ale#Escape('-I' . a:path_prefix .
-                                          \ s:sep . l:rel_path)
-            endif
-        elseif l:option[0:1] == '-I' && len(l:option) > 2
-            if l:option[2] != s:sep
-                let l:rel_path = join(split(l:option, '\zs')[2:], '')
-                let l:rel_path = substitute(l:rel_path, '"', '', 'g')
-                let l:rel_path = substitute(l:rel_path, '''', '', 'g')
-                let l:option = ale#Escape('-I' . a:path_prefix .
-                                          \ s:sep . l:rel_path)
+                let l:option = a:path_prefix . s:sep . l:option
             endif
         endif
 
-        if l:previous_option == '-I' || l:previous_option == '-D'
+        if l:previous_option == '-I'
             call add(l:cflags_list, l:previous_option)
-            call add(l:cflags_list, l:option)
-        elseif (l:option[0:1] == '-I' || l:option[0:1] == '-D')
-            \ && len(l:option) > 2
-            call add(l:cflags_list, l:option)
+            call add(l:cflags_list, ale#Escape(l:option))
+        elseif l:previous_option == '-D'
+            call add(l:cflags_list, l:previous_option)
+            call add(l:cflags_list, l:option) " seems hacky
         endif
 
         let l:previous_option = l:option
